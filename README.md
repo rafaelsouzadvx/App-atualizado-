@@ -1,4 +1,4 @@
-# Rafael Lava Jato & Estética Automotiva
+# Jat wash
 
 App de gestão (demonstração, sem backend) — mobile-first, instalável (PWA).
 
