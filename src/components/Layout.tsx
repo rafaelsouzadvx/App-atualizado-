@@ -19,9 +19,11 @@ import {
   Clock3,
   FileText,
   Home,
+  Zap,
 } from 'lucide-react'
 import { navigate, useRoute, type Route } from '../lib/router'
-import { cn, fmtPlate, normalize, orderTitle } from '../lib/utils'
+import type { PayMethod } from '../lib/types'
+import { cn, fmtPlate, money, normalize, orderTitle, todayISO, uid } from '../lib/utils'
 import { useDB } from '../store/data'
 import { confirmDialog, openForm, toast, useUI } from '../store/ui'
 import { NAV } from './nav'
@@ -217,7 +219,9 @@ function MobileHeader() {
 /* ---------------- Bottom nav (mobile) ---------------- */
 function BottomNav() {
   const route = useRoute()
-  const { setQuickOpen, setMoreOpen, moreOpen } = useUI()
+  const setQuickOpen = useUI((s) => s.setQuickOpen)
+  const setMoreOpen = useUI((s) => s.setMoreOpen)
+  const moreOpen = useUI((s) => s.moreOpen)
   const items: { route: Route; label: string; icon: typeof Home }[] = [
     { route: 'dashboard', label: 'Início', icon: Home },
     { route: 'agenda', label: 'Agenda', icon: CalendarDays },
@@ -273,6 +277,13 @@ export const QUICK_ACTIONS = [
 export function QuickGrid() {
   return (
     <div className="grid grid-cols-2 gap-2.5">
+      <button
+        onClick={() => useUI.getState().setSaleOpen(true)}
+        className="col-span-2 flex h-16 items-center justify-center gap-3 rounded-2xl bg-gold-gradient text-[16px] font-bold text-black shadow-gold transition active:scale-[0.98]"
+      >
+        <Zap size={24} strokeWidth={2.4} />
+        Venda rápida
+      </button>
       {QUICK_ACTIONS.map((a) => (
         <button
           key={a.label}
@@ -287,8 +298,126 @@ export function QuickGrid() {
   )
 }
 
+const SALE_METHODS: PayMethod[] = ['Pix', 'Dinheiro', 'Crédito', 'Débito']
+
+/** Registra uma venda em dois toques: valor + forma de pagamento. */
+function QuickSaleSheet() {
+  const open = useUI((s) => s.saleOpen)
+  const setOpen = useUI((s) => s.setSaleOpen)
+  const upsert = useDB((s) => s.upsert)
+  const services = useDB((s) => s.services)
+  const [amount, setAmount] = useState('')
+  const [desc, setDesc] = useState('Lavagem')
+
+  useEffect(() => {
+    if (!open) {
+      setAmount('')
+      setDesc('Lavagem')
+    }
+  }, [open])
+
+  const chips = useMemo(() => {
+    const seen = new Set<string>()
+    const list: { name: string; price: number }[] = []
+    services
+      .filter((s) => s.active)
+      .forEach((s) => {
+        const name = s.name.trim()
+        if (seen.has(name)) return
+        seen.add(name)
+        list.push({ name, price: s.price })
+      })
+    return list.slice(0, 8)
+  }, [services])
+
+  const value = parseFloat(amount.replace(',', '.')) || 0
+
+  const save = (method: PayMethod) => {
+    if (!value) {
+      toast('Informe o valor da venda', 'error')
+      return
+    }
+    upsert('transactions', {
+      id: uid(),
+      type: 'in',
+      category: 'Serviços',
+      description: desc.trim() || 'Venda',
+      amount: Math.round(value * 100) / 100,
+      date: todayISO(),
+      status: 'pago',
+      method,
+    })
+    toast(`Venda de ${money(value)} registrada (${method})`)
+    setOpen(false)
+  }
+
+  return (
+    <Sheet open={open} onClose={() => setOpen(false)} title="Venda rápida" subtitle="Digite o valor e toque na forma de pagamento" size="sm">
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="sale-amount" className="mb-1.5 block text-[12.5px] text-muted">
+            Valor (R$)
+          </label>
+          <input
+            id="sale-amount"
+            autoFocus
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value.replace(/[^\d,.]/g, ''))}
+            placeholder="0,00"
+            className="h-16 w-full rounded-2xl border border-gold-500/40 bg-ink/60 px-4 font-display text-3xl font-semibold tabular-nums outline-none focus:border-gold-500"
+          />
+        </div>
+        <div>
+          <p className="mb-1.5 text-[12.5px] text-muted">O que foi feito</p>
+          <div className="flex flex-wrap gap-2">
+            {chips.map((c) => (
+              <button
+                key={c.name}
+                type="button"
+                onClick={() => {
+                  setDesc(c.name)
+                  if (!value) setAmount(String(c.price).replace('.', ','))
+                }}
+                className={cn(
+                  'h-9 rounded-full border px-3.5 text-[13px] font-medium transition',
+                  desc === c.name ? 'border-gold-500 bg-gold-500 text-black' : 'border-line-2 bg-surface-2 text-muted hover:text-fg',
+                )}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+          <input
+            id="sale-desc"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            placeholder="Descrição"
+            className="mt-2.5 h-11 w-full rounded-xl border border-line-2 bg-ink/60 px-3.5 text-sm outline-none focus:border-gold-500"
+          />
+        </div>
+        <div>
+          <p className="mb-1.5 text-[12.5px] text-muted">Receber em</p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {SALE_METHODS.map((m) => (
+              <button
+                key={m}
+                onClick={() => save(m)}
+                className="h-16 rounded-2xl border border-line-2 bg-ink/40 text-[15px] font-semibold transition hover:border-gold-500 active:scale-95"
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Sheet>
+  )
+}
+
 function QuickSheet() {
-  const { quickOpen, setQuickOpen } = useUI()
+  const quickOpen = useUI((s) => s.quickOpen)
+  const setQuickOpen = useUI((s) => s.setQuickOpen)
   return (
     <Sheet open={quickOpen} onClose={() => setQuickOpen(false)} title="Ações rápidas" subtitle="O que você quer fazer agora?" size="sm">
       <QuickGrid />
@@ -297,7 +426,8 @@ function QuickSheet() {
 }
 
 function MoreSheet() {
-  const { moreOpen, setMoreOpen } = useUI()
+  const moreOpen = useUI((s) => s.moreOpen)
+  const setMoreOpen = useUI((s) => s.setMoreOpen)
   const route = useRoute()
   const s = useDB((x) => x.settings)
   return (
@@ -326,9 +456,13 @@ function MoreSheet() {
 }
 
 function SearchSheet() {
-  const { searchOpen, setSearchOpen, openDetail } = useUI()
+  const searchOpen = useUI((s) => s.searchOpen)
+  const setSearchOpen = useUI((s) => s.setSearchOpen)
+  const openDetail = useUI((s) => s.openDetail)
   const [q, setQ] = useState('')
-  const { clients, vehicles, orders } = useDB()
+  const clients = useDB((s) => s.clients)
+  const vehicles = useDB((s) => s.vehicles)
+  const orders = useDB((s) => s.orders)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -503,6 +637,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </main>
       <BottomNav />
       <QuickSheet />
+      <QuickSaleSheet />
       <MoreSheet />
       <SearchSheet />
       <Toaster />

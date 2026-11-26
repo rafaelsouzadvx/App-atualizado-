@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { ArrowDownRight, ArrowUpRight, Ban, CalendarDays, Car, CheckCircle2, CircleDollarSign, Users, Wrench, CalendarCheck2 } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Ban, Car, CheckCircle2, CircleDollarSign, HandCoins, Receipt, TrendingUp, Wrench, CalendarCheck2, Zap } from 'lucide-react'
 import { BarChart, Ring } from '../components/charts'
 import { QuickGrid, useNow } from '../components/Layout'
-import { Badge, Card, IconTile, LinkAction, VehicleThumb, toneText } from '../components/ui'
+import { Badge, Button, Card, IconTile, LinkAction, VehicleThumb, toneText } from '../components/ui'
 import { PaySheet } from '../components/Details'
 import { navigate } from '../lib/router'
 import type { Order, OrderStatus, Transaction } from '../lib/types'
@@ -15,9 +15,8 @@ const pct = (a: number, b: number) => (b ? Math.round(((a - b) / b) * 100) : a ?
 export default function Dashboard() {
   const orders = useDB((s) => s.orders)
   const transactions = useDB((s) => s.transactions)
-  const clients = useDB((s) => s.clients)
-  const vehicles = useDB((s) => s.vehicles)
   const settings = useDB((s) => s.settings)
+  const setSaleOpen = useUI((s) => s.setSaleOpen)
   const cm = useClientMap()
   const vm = useVehicleMap()
   const now = useNow(60000)
@@ -26,19 +25,24 @@ export default function Dashboard() {
 
   const d = useMemo(() => {
     const paidIn = transactions.filter((t) => t.type === 'in' && t.status === 'pago')
+    const paidOut = transactions.filter((t) => t.type === 'out' && t.status === 'pago')
     const revenueOn = (date: string) => paidIn.filter((t) => t.date === date).reduce((s, t) => s + t.amount, 0)
-    const ordersOn = (date: string) => orders.filter((o) => o.date === date && o.status !== 'cancelado')
+    const salesOn = (date: string) => paidIn.filter((t) => t.date === date).length
+    const pendingIn = transactions.filter((t) => t.type === 'in' && t.status === 'pendente')
+    const readyUnpaid = orders.filter((o) => o.status === 'pronto' && !o.paid && !transactions.some((t) => t.orderId === o.id))
     const month = today.slice(0, 7)
     const monthRevenue = paidIn.filter((t) => t.date.startsWith(month)).reduce((s, t) => s + t.amount, 0)
     const todays = orders.filter((o) => o.date === today).sort((a, b) => a.time.localeCompare(b.time))
     const statusCount = (s: OrderStatus) => todays.filter((o) => o.status === s).length
-    const newClients = clients.filter((c) => c.createdAt.startsWith(month)).length
-    const active = new Set(orders.filter((o) => o.date >= addDays(today, -90)).map((o) => o.clientId)).size
     return {
       revenueToday: revenueOn(today),
       revenueYesterday: revenueOn(yesterday),
-      servicesToday: ordersOn(today).length,
-      servicesYesterday: ordersOn(yesterday).length,
+      salesToday: salesOn(today),
+      salesYesterday: salesOn(yesterday),
+      expensesToday: paidOut.filter((t) => t.date === today).reduce((s, t) => s + t.amount, 0),
+      readyUnpaid,
+      toReceive: pendingIn.reduce((s, t) => s + t.amount, 0) + readyUnpaid.reduce((s, o) => s + orderTotal(o), 0),
+      toReceiveCount: pendingIn.length + readyUnpaid.length,
       week: Array.from({ length: 7 }, (_, i) => {
         const date = addDays(today, i - 6)
         return { label: fmtDayMonth(date), value: revenueOn(date) }
@@ -46,9 +50,6 @@ export default function Dashboard() {
       monthRevenue,
       todays,
       statusCount,
-      active,
-      newClients,
-      vehiclesToday: new Set(todays.filter((o) => o.status !== 'cancelado').map((o) => o.vehicleId)).size,
       latest: orders
         .filter((o) => o.status === 'entregue')
         .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
@@ -57,7 +58,7 @@ export default function Dashboard() {
         .filter((t) => t.type === 'in' && t.status === 'pendente')
         .sort((a, b) => (a.dueDate ?? a.date).localeCompare(b.dueDate ?? b.date)),
     }
-  }, [orders, transactions, clients, today, yesterday])
+  }, [orders, transactions, today, yesterday])
 
   const hour = now.getHours()
   const greet = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
@@ -65,7 +66,8 @@ export default function Dashboard() {
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const daysLeft = daysInMonth - now.getDate()
   const revDelta = pct(d.revenueToday, d.revenueYesterday)
-  const svcDelta = pct(d.servicesToday, d.servicesYesterday)
+  const salesDelta = pct(d.salesToday, d.salesYesterday)
+  const resultToday = d.revenueToday - d.expensesToday
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -75,6 +77,9 @@ export default function Dashboard() {
         <h1 className="text-[26px] font-bold tracking-tight">
           {greet}, <span className="text-gold-gradient">{settings.ownerName}!</span>
         </h1>
+        <Button variant="primary" size="lg" icon={Zap} className="mt-3 w-full" onClick={() => setSaleOpen(true)}>
+          Venda rápida
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -82,9 +87,13 @@ export default function Dashboard() {
         <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
           <div className="order-1 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
             <Kpi icon={CircleDollarSign} tone="green" label="Faturamento Hoje" value={money(d.revenueToday)} delta={revDelta} deltaText="vs. ontem" onClick={() => navigate('financeiro')} />
-            <Kpi icon={CalendarDays} tone="blue" label="Serviços Hoje" value={String(d.servicesToday)} delta={svcDelta} deltaText="vs. ontem" onClick={() => navigate('agenda')} />
-            <Kpi icon={Users} tone="violet" label="Clientes Ativos" value={String(d.active)} sub={`${clients.length} cadastrados`} onClick={() => navigate('clientes')} />
-            <Kpi icon={Car} tone="gold" label="Veículos Cadastrados" value={String(vehicles.length)} sub={`${d.vehiclesToday} atendidos hoje`} onClick={() => navigate('veiculos')} />
+            <Kpi icon={Receipt} tone="blue" label="Vendas Hoje" value={String(d.salesToday)} delta={salesDelta} deltaText="vs. ontem" onClick={() => navigate('financeiro')} />
+            <Kpi icon={TrendingUp} tone={resultToday >= 0 ? 'gold' : 'red'} label="Resultado Hoje" value={money(resultToday)} sub={`Despesas: ${money(d.expensesToday)}`} onClick={() => navigate('financeiro')} />
+            <Kpi icon={HandCoins} tone="violet" label="A Receber" value={money(d.toReceive)} sub={d.toReceiveCount ? `${d.toReceiveCount} em aberto` : 'tudo em dia'} onClick={() => navigate('financeiro')} />
+          </div>
+
+          <div className="order-1">
+            <ReadyToCollect orders={d.readyUnpaid} cm={cm} vm={vm} />
           </div>
 
           {/* Status (mobile primeiro) */}
@@ -342,3 +351,43 @@ function Receivables({ list, cm }: { list: Transaction[]; cm: ReturnType<typeof 
   )
 }
 
+
+function ReadyToCollect({ orders, cm, vm }: { orders: Order[]; cm: ReturnType<typeof useClientMap>; vm: ReturnType<typeof useVehicleMap> }) {
+  const deliverOrder = useDB((s) => s.deliverOrder)
+  const [sel, setSel] = useState<Order | null>(null)
+  if (!orders.length) return null
+  return (
+    <Card title="Prontos para cobrar" action={<Badge tone="green">{orders.length}</Badge>} bodyClass="!px-2 sm:!px-3 !pb-2">
+      <ul className="divide-y divide-line/70">
+        {orders.map((o) => {
+          const v = vm.get(o.vehicleId)
+          return (
+            <li key={o.id} className="flex items-center gap-3 px-2 py-2.5">
+              <span className="min-w-0 flex-1 leading-snug">
+                <span className="block truncate text-[14px] font-medium">{cm.get(o.clientId)?.name ?? '—'}</span>
+                <span className="block truncate text-[12.5px] text-muted">
+                  {v ? `${v.brand} ${v.model} · ${v.plate}` : orderTitle(o)}
+                </span>
+              </span>
+              <span className="shrink-0 text-[14px] font-semibold tabular-nums">{money(orderTotal(o))}</span>
+              <Button variant="primary" size="sm" onClick={() => setSel(o)}>
+                Receber
+              </Button>
+            </li>
+          )
+        })}
+      </ul>
+      <PaySheet
+        open={!!sel}
+        total={sel ? orderTotal(sel) : 0}
+        onClose={() => setSel(null)}
+        onPick={(m) => {
+          if (!sel) return
+          deliverOrder(sel.id, m)
+          toast(m === 'A prazo' ? 'Entregue — lançado em contas a receber' : `Recebido ${money(orderTotal(sel))} via ${m}`)
+          setSel(null)
+        }}
+      />
+    </Card>
+  )
+}

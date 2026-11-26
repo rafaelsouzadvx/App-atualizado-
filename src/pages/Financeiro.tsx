@@ -15,7 +15,7 @@ export default function Financeiro() {
   const transactions = useDB((s) => s.transactions)
   const receive = useDB((s) => s.receive)
   const cm = useClientMap()
-  const [period, setPeriod] = useState<Period>('month')
+  const [period, setPeriod] = useState<Period>('today')
   const [tab, setTab] = useState<Tab>('all')
   const [paying, setPaying] = useState<Transaction | null>(null)
   const today = todayISO()

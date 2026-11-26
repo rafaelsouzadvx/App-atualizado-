@@ -40,6 +40,8 @@ interface UI {
   setMoreOpen: (v: boolean) => void
   searchOpen: boolean
   setSearchOpen: (v: boolean) => void
+  saleOpen: boolean
+  setSaleOpen: (v: boolean) => void
   detail: { kind: 'order' | 'client'; id: ID } | null
   openDetail: (d: UI['detail']) => void
 }
@@ -74,6 +76,8 @@ export const useUI = create<UI>()((set, get) => ({
   setMoreOpen: (v) => set({ moreOpen: v }),
   searchOpen: false,
   setSearchOpen: (v) => set({ searchOpen: v }),
+  saleOpen: false,
+  setSaleOpen: (v) => set({ saleOpen: v, quickOpen: false, moreOpen: false }),
   detail: null,
   openDetail: (d) => set({ detail: d }),
 }))
