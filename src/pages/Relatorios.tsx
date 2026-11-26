@@ -37,6 +37,7 @@ export default function Relatorios() {
     const paidOut = tx.filter((t) => t.type === 'out' && t.status === 'pago')
     const pendingOut = transactions.filter((t) => t.type === 'out' && t.status === 'pendente')
     const revenue = sum(paidIn.map((t) => t.amount))
+    const sales = paidIn.filter((t) => t.category !== 'Ajuste')
     const expenses = sum(paidOut.map((t) => t.amount))
 
     // OS que já passaram pelo balcão (prontas ou entregues) no período
@@ -53,9 +54,9 @@ export default function Relatorios() {
     const group = (list: { key: string; value: number }[]) => {
       const m = new Map<string, number>()
       list.forEach((x) => m.set(x.key, (m.get(x.key) ?? 0) + x.value))
-      return [...m].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)
+      return [...m].map(([label, value]) => ({ label, value })).filter((d) => d.value > 0).sort((a, b) => b.value - a.value)
     }
-    const methods = group(paidIn.map((t) => ({ key: t.method ?? 'Não informado', value: t.amount })))
+    const methods = group(paidIn.filter((t) => t.category !== 'Ajuste').map((t) => ({ key: t.method ?? 'Não informado', value: t.amount })))
     const outCats = group(paidOut.map((t) => ({ key: t.category || 'Outros', value: t.amount })))
 
     const bySvc = new Map<string, { value: number; n: number }>()
@@ -125,7 +126,7 @@ export default function Relatorios() {
       toReceive,
       unpaidReadyN: unpaidReady.length,
       done,
-      ticket: paidIn.length ? revenue / paidIn.length : 0,
+      ticket: sales.length ? sum(sales.map((t) => t.amount)) / sales.length : 0,
       daily,
       methods,
       outCats,
@@ -209,7 +210,7 @@ export default function Relatorios() {
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Receita recebida" value={money(r.revenue)} tone="gold" sub={`${r.paidIn.length} entradas · ticket ${money(r.ticket)}`} />
+        <Stat label="Receita recebida" value={money(r.revenue)} tone="gold" sub={`${r.paidIn.filter((t) => t.category !== 'Ajuste').length} entradas · ticket ${money(r.ticket)}`} />
         <Stat label="Despesas pagas" value={money(r.expenses)} sub={r.pendingOutTotal ? `+ ${money(r.pendingOutTotal)} pendente` : 'nenhuma pendência'} />
         <Stat label="Resultado" value={money(result)} tone={result >= 0 ? 'green' : 'red'} sub={`margem ${margin}%`} />
         <Stat label="A receber" value={money(r.toReceive)} tone={r.toReceive ? 'blue' : undefined} sub={r.unpaidReadyN ? `${r.unpaidReadyN} OS pronta${r.unpaidReadyN > 1 ? 's' : ''} sem pagar` : 'tudo em dia'} />

@@ -27,7 +27,7 @@ export default function Dashboard() {
     const paidIn = transactions.filter((t) => t.type === 'in' && t.status === 'pago')
     const paidOut = transactions.filter((t) => t.type === 'out' && t.status === 'pago')
     const revenueOn = (date: string) => paidIn.filter((t) => t.date === date).reduce((s, t) => s + t.amount, 0)
-    const salesOn = (date: string) => paidIn.filter((t) => t.date === date).length
+    const salesOn = (date: string) => paidIn.filter((t) => t.date === date && t.category !== 'Ajuste').length
     const pendingIn = transactions.filter((t) => t.type === 'in' && t.status === 'pendente')
     const readyUnpaid = orders.filter((o) => o.status === 'pronto' && !o.paid && !transactions.some((t) => t.orderId === o.id))
     const month = today.slice(0, 7)
