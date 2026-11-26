@@ -8,7 +8,7 @@ export function Logo({ compact, className }: { compact?: boolean; className?: st
         <img src="/favicon.svg" alt="" className="h-9 w-9" />
         <div className="leading-none">
           <div className="font-display text-[22px] font-extrabold italic tracking-tight text-gold-gradient">JAT WASH</div>
-          <div className="mt-0.5 text-[8.5px] font-semibold uppercase tracking-[0.18em] text-fg/80">Lava Jato & Estética</div>
+          <div className="mt-0.5 text-[8.5px] font-semibold uppercase tracking-[0.18em] text-fg/80">Lava Rápido</div>
         </div>
       </div>
     )
@@ -27,10 +27,9 @@ export function Logo({ compact, className }: { compact?: boolean; className?: st
         <path d="M40 34 C70 22 100 17 130 17 C160 17 182 23 200 31" fill="none" stroke="url(#lg-swoosh)" strokeWidth="1.2" opacity=".6" />
       </svg>
       <div className="font-display text-[40px] font-extrabold italic tracking-tight text-gold-gradient drop-shadow-[0_2px_10px_rgba(245,184,28,0.25)]">JAT WASH</div>
-      <div className="-mt-0.5 font-display text-[17px] font-bold italic tracking-[0.12em] text-white">LAVA JATO &amp;</div>
       <div className="mt-1 flex items-center justify-center gap-1.5 whitespace-nowrap">
         <span className="h-px w-4 bg-gradient-to-r from-transparent to-gold-500" />
-        <span className="font-display text-[10.5px] font-bold italic tracking-[0.08em] text-gold-400">ESTÉTICA AUTOMOTIVA</span>
+        <span className="font-display text-[13px] font-bold italic tracking-[0.18em] text-gold-400">LAVA RÁPIDO</span>
         <span className="h-px w-4 bg-gradient-to-l from-transparent to-gold-500" />
       </div>
     </div>
