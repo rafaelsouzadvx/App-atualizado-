@@ -22,7 +22,7 @@ export default function Estoque() {
 
   const shoppingList = () => {
     if (!low.length) return toast('Nenhum produto abaixo do mínimo 🎉', 'info')
-    const text = `*Lista de compras — Rafael Estética*\n\n${low.map((p) => `• ${p.name}: comprar ${Math.max(p.minQty * 2 - p.qty, 1)} ${p.unit}`).join('\n')}`
+    const text = `*Lista de compras — JAT Wash*\n\n${low.map((p) => `• ${p.name}: comprar ${Math.max(p.minQty * 2 - p.qty, 1)} ${p.unit}`).join('\n')}`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
   }
 

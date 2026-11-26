@@ -48,7 +48,7 @@ function Loading() {
 export default function App() {
   const route = useRoute()
   useEffect(() => {
-    document.title = `${TITLES[route]} · Rafael Estética`
+    document.title = `${TITLES[route]} · JAT Wash`
   }, [route])
   const Page = route === 'dashboard' ? Dashboard : pages[route]
   return (

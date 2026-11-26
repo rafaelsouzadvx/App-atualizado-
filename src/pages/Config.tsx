@@ -48,7 +48,7 @@ export default function Config() {
   const backup = () => {
     const s = useDB.getState()
     const data: DB = { clients: s.clients, vehicles: s.vehicles, services: s.services, orders: s.orders, quotes: s.quotes, transactions: s.transactions, products: s.products, inspections: s.inspections, settings: s.settings }
-    downloadFile(`backup-rafael-estetica-${todayISO()}.json`, JSON.stringify(data), 'application/json')
+    downloadFile(`backup-jatwash-${todayISO()}.json`, JSON.stringify(data), 'application/json')
     toast('Backup baixado')
   }
   const restore = async (file?: File) => {

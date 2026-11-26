@@ -297,7 +297,7 @@ export function createSeed(): DB {
     products,
     inspections,
     settings: {
-      businessName: 'Rafael Lava Jato & Estética Automotiva',
+      businessName: 'JAT Wash Lava Jato & Estética Automotiva',
       ownerName: 'Rafael',
       phone: '(17) 99999-0000',
       address: 'Av. Principal, 1000 — Centro',

@@ -164,6 +164,10 @@ export const useDB = create<Store>()(
           const missing = DEFAULT_TEMPLATES.filter((t) => !known.has(t.id))
           if (missing.length) merged.settings = { ...merged.settings, templates: [...p.settings.templates, ...missing] }
         }
+        // quem já usava o app com o nome padrão antigo passa a ver o nome novo (nomes personalizados ficam como estão)
+        if (merged.settings.businessName === 'Rafael Lava Jato & Estética Automotiva') {
+          merged.settings = { ...merged.settings, businessName: 'JAT Wash Lava Jato & Estética Automotiva' }
+        }
         if (!p?.anchor) return merged
         const diff = Math.round((parseISO(todayISO()).getTime() - parseISO(p.anchor).getTime()) / 86400000)
         if (!diff) return merged

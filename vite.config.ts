@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Rafael Lava Jato & Estética Automotiva',
-        short_name: 'Rafael Estética',
+        name: 'JAT Wash Lava Jato & Estética Automotiva',
+        short_name: 'JAT Wash',
         description: 'Gestão completa do lava jato e estética automotiva',
         lang: 'pt-BR',
         theme_color: '#08080a',
