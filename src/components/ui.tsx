@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { Car, ChevronDown, ChevronRight, Search, X, type LucideIcon } from 'lucide-react'
 import { cn, initials, type Tone } from '../lib/utils'
@@ -302,14 +303,14 @@ export function Sheet({
   }, [open, onClose])
   if (!open) return null
   const w = { sm: 'sm:max-w-md', md: 'sm:max-w-xl', lg: 'sm:max-w-3xl' }[size]
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby={id}>
       <div className="absolute inset-0 animate-fade-in bg-black/70 backdrop-blur-[2px]" onClick={onClose} />
       <div
         ref={panel}
         data-sheet
         className={cn(
-          'relative flex max-h-[92dvh] w-full animate-slide-up flex-col rounded-t-3xl border border-line-2 bg-surface sm:max-h-[88dvh] sm:animate-pop sm:rounded-3xl',
+          'relative flex max-h-[88dvh] w-full animate-slide-up flex-col rounded-t-3xl border border-line-2 bg-surface sm:max-h-[88dvh] sm:animate-pop sm:rounded-3xl',
           w,
         )}
       >
@@ -328,7 +329,8 @@ export function Sheet({
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-5">{children}</div>
         {footer && <footer className="pb-safe flex gap-2 border-t border-line bg-surface/95 px-5 py-3.5 sm:rounded-b-3xl [&>*]:flex-1 sm:[&>*]:flex-none sm:justify-end">{footer}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
